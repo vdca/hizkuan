@@ -19,6 +19,8 @@ opts_chunk$set(tidy=TRUE, width=10, fig.width=4, fig.height=4, comment="" , prom
 hook2 <- function(x){ gsub("```\n+```\n", "", x) }
 knit_hooks$set(document = hook2)
 
+#' ## https://github.com/vdca/hizkuan
+#'
 
 #' ## What is R
 #'
