@@ -11,7 +11,6 @@ library("tidyverse")
 #--------------------------------------------------------------
 
 # R, Rstudio, R packages, tidyverse
-
 # goals: (1) tidy, (2) statistical analysis, (3) plots and visual exploration
 
 # scripts: analysis1.R
@@ -19,7 +18,7 @@ library("tidyverse")
 # help:
 #   - search-search-search the web
 #   - read the R documentation: ?function
-#   - books, courses, tutorials: e.g. https://r4ds.had.co.nz/; Baayen 2018
+#   - books, courses, tutorials: e.g. https://r4ds.had.co.nz/; Baayen 2008
 #   - talk to people, groups: e.g. R-Ladies (https://rladies.org/)
 
 #--------------------------------------------------------------
@@ -38,6 +37,8 @@ library("tidyverse")
 3.14
 "great"
 notgreat
+
+nchar("great")
 
 # R is a powerful calculator
 1+1
@@ -58,6 +59,14 @@ sqrt(16)
 # we can use whatever we have stored by naming the variable in the future.
 # we assign stuff to variables using a sort-of arrow:
 
+a <- "hitz bat"
+nchar(a)
+nchar("hitz bat")
+
+zerrendabat <- c("hitzbat", "luzeagobat", "bost", "lasdjflkdsajflkajsdlkfjdsalkfalsdjflkasjflkjdsaflkjsadflkjdsalkf")
+zerrendabat
+nchar(zerrendabat)
+
 named_variable <- "stuff stored in variable"
 named_variable
 
@@ -71,6 +80,7 @@ thisyear - 18
 
 # single data points
 3
+"hitz"
 
 # one-dimensional data (= vector)
 c(3, 4, 9, 12)
@@ -83,6 +93,8 @@ experiment
 
 # you can extract a column as a vector using the dollar sign ($)
 experiment$reaction_time
+
+mean(experiment$reaction_time)
 
 # in R we use vectors everywhere
 a <- 1:100
@@ -101,12 +113,13 @@ a+1
 # all paths to a file are relative to the working directory
 
 # you can check the current working directory:
-getwd()
 
 # and set it by using the setwd() function, or clicking:
 # Session > Set Working Directory > To Source File Location
 
-d <- read_csv("data/ehme.csv")
+d <- read_csv("../data/ehme.csv")
+
+neredatumarabilosoak <- read_csv("../data/ehme.csv")
 
 #--------------------------------------------------------------
 # quickly explore data
@@ -162,7 +175,11 @@ ggplot(d) +
   geom_bar()
 
 # are longer pronouns less frequent?
-
+d %>% 
+  filter(pos == "izr") %>% 
+  ggplot() +
+  aes(x = lemmalength, y = ehme_log) +
+  geom_jitter(alpha = 0.5)
 
 #--------------------------------------------------------------
 # next?
