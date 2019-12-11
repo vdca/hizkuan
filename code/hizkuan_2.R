@@ -31,6 +31,7 @@ sqrt(a)
 a+1
 
 # Q: what is the mean of a?
+mean(a)
 
 #--------------------------------------------------------------
 # read and write data
@@ -43,7 +44,7 @@ a+1
 d <- read_csv("../data/ehme.csv")
 
 # if you haven't installed or loaded the package tidyverse, you can read the file using:
-# d <- read.csv("../data/ehme.csv")
+d <- read.csv("../data/ehme.csv")
 
 #--------------------------------------------------------------
 # explore data
@@ -61,17 +62,36 @@ d
 arrange(d, lemmalength)
 
 # Q: and the longest word?
+arrange(d, desc(lemmalength))
+arrange(d, desc(ehme_freq))
+
+# head, tail
+tail(arrange(d, lemmalength), 10)
+tail(d)
+
+bukaera <- tail(d)
+bukaera
 
 # Q: and the most frequent two-character word?
+arrange(d, desc(lemmalength = 2))
+
+arrange(d, lemmalength, desc(ehme_freq))
+arrange(d, lemmalength, -ehme_freq)
+
+arrange(arrange(d, lemmalength), desc(ehme_freq))
 
 # Q: what is the most frequent POS?
-count(d, pos)
+arrange(count(d, pos), -n)
+
+count(d, pos, sort = TRUE)
 
 # filter data using the filter() function
 # logical operators: >, <, ==, !=, etc.
-filter(d, pos == "ize")
+g <- filter(d, pos == "ize")
 
 # Q: save all the pronouns into a separate dataframe
+pronouns <- filter(d, pos == "izr")
+pronouns
 
 #--------------------------------------------------------------
 # plot data
@@ -90,12 +110,19 @@ ggplot(pronouns) +
 
 # alpha to visualise overlap
 ggplot(pronouns) +
-  geom_jitter(aes(x = lemmalength, y = ehme_log), alpha = 0.5)
+  geom_jitter(aes(x = lemmalength, y = ehme_log), alpha = 0.8)
 
 # Q: how do we visualise the actual words (instead of dots)?
 
-# Q: modify axis labels, add title
+ggplot(pronouns) +
+  geom_label(aes(x = lemmalength, y = ehme_log, label = lemma), alpha = 0.5)
 
+# Q: modify axis labels, add title
+ggplot(pronouns) +
+  geom_label(aes(x = lemmalength, y = ehme_log, label = lemma), alpha = 0.5) +
+  xlab("Luzera") +
+  ylab("Maiztasuna (log)") +
+  ggtitle("Long pronouns are less frequent")
 
 # quick stats preview: lm() for simple linear regression:
 # the equation y ~ x means: response ~ predictor(s) means: does predictor x explain response y?
@@ -112,7 +139,7 @@ summary(freq_model)
 # search the internet: e.g. r how to read xlsx
 # several options; for instance:
 library(readxl)
-garazi <- read_xlsx('Emaitza_taula_barrixa.xlsx', sheet = 3)
+garazi <- read_xlsx('../hidden/Emaitza_taula_barrixa.xlsx', sheet = 3)
 
 # tip: store each dataframe in a separate file
 # better csv than xlsx (better = lighter, faster, more compatible)
