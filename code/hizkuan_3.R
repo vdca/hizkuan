@@ -3,6 +3,10 @@
 # global
 #--------------------------------------------------------------
 
+# remove previous objects from workspace
+rm(list=ls())
+
+# load libraries
 library("tidyverse")
 library("readxl")
 
