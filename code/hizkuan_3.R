@@ -40,10 +40,8 @@ ehme <- read_csv("../data/ehme.csv")
 
 # Q: how do we save a dataframe from R into the computer?
 # --> save all the pronouns into a separate file. extra: ordered by frequency.
-
-
-
-
+pronouns <- filter(ehme, pos == "izr")
+write_csv(pronouns, "../data/besteizenbat.csv")
 
 #--------------------------------------------------------------
 # word length and frequency: plot and regression
@@ -70,7 +68,7 @@ ggplot(pronouns) +
   xlab("Luzera") +
   ylab("Maiztasuna (log)") +
   ggtitle("Long pronouns are less frequent") +
-  geom_smooth(aes(x = lemmalength, y = ehme_log), method = "lm")
+  geom_smooth(aes(x = lemmalength, y = ehme_log))
 
 #--------------------------------------------------------------
 # sociophonetics in Garazi
@@ -92,6 +90,8 @@ count(garazi, Herria)
 # a pipe (%>%) passes the object on left hand side as first argument of function on righthand side.
 # x %>% f(y) is the same as f(x, y)
 # shortcut = ctrl + shift + m
+mean(c(3,4,5))
+c(3,4,5) %>% mean()
 
 
 
@@ -102,7 +102,14 @@ count(garazi, Herria)
 # add proportion within each group (use mutate() to add extra columns)
 # arrange by proportion
 
+garazi %>% 
+  filter(feature == "h hasieran") %>% 
+  group_by(Herria, Generoa, Adina) %>%
+  count(Erantzuna) %>% 
+  mutate(proportion = n/sum(n))
 
+print("hello")
+"hello" %>% print()
 
 
 
@@ -116,8 +123,9 @@ garazi_h <- garazi %>%
   arrange(p)
 
 garazi_h %>% 
+  mutate(Generoa = recode(Generoa, 'neskak', 'mutilak')) %>% 
   ggplot() +
-  geom_col(aes(x = Adina, y = p, fill = Adina), position = position_dodge()) +
+  geom_col(aes(x = Adina, y = p, fill = Adina), position = position_dodge()) + 
   facet_grid(Generoa ~ Herria)
 
 #--------------------------------------------------------------
@@ -130,7 +138,7 @@ generics <- read_tsv("../data/generics_adults_response.txt")
 # data as exported from E-Prime.
 # too many columns; select a handful.
 # also: filter out training trials
-generics %>%
+test.trials <- generics %>%
   select(Subject, Trial, Determiner, Bis.ACC, Bis.CRESP, Bis.RESP, Bis.RT) %>% 
   filter()
 
@@ -144,18 +152,52 @@ test.trials %>%
   ggplot() +
   geom_boxplot(aes(x = Determiner, y = Bis.RT))
 
+#--------------------------------------------------------------
+# side note: how to tweak plots. check out:
+# https://ggplot2.tidyverse.org/reference/ggtheme.html
+# and
+# https://ggplot2.tidyverse.org/reference/theme.html
+# and
+# https://cran.r-project.org/web/packages/cowplot/vignettes/introduction.html
+library(cowplot)
+theme_set(theme_cowplot())
+# theme_set(theme_bw() + theme(strip.background = element_blank()))
+#--------------------------------------------------------------
+
 # does experimental condition (Determiner) affect RT?
 # analyse statistically:
 model_rt <- lm(Bis.RT ~ Determiner, data = test.trials)
 summary(model_rt)
+
+# confidence intervals for binomial (proportion) data
+library(epitools)
+acc.ci <- test.trials %>% 
+  group_by(Determiner) %>% 
+  count(Bis.ACC) %>% 
+  mutate(total = sum(n)) %>% 
+  ungroup() %>%
+  filter(Bis.ACC == 1) %>% 
+  mutate(mean.acc = n/total,
+         lower.ci = binom.exact(n, total, .95)$lower,
+         upper.ci = binom.exact(n, total, .95)$upper)
 
 # does experimental condition (Determiner) affect accuracy?
 # analyse visually:
 test.trials %>% 
   ggplot() +
   aes(x = Determiner, y = Bis.ACC) +
-  geom_jitter(alpha = 0.3) +
-  stat_summary(fun.data = "mean_se", colour = "red", size = 1)
+  geom_jitter(alpha = 0.1) +
+  geom_errorbar(aes(ymin=lower.ci, ymax=upper.ci),
+                size = 1, width=.1, colour = 'red', data = acc.ci)
+
+acc.ci %>% 
+  ggplot() +
+  aes(x = Determiner) +
+  geom_errorbar(aes(ymin=lower.ci, ymax=upper.ci),
+                size = 1, width=.1, colour = 'red') +
+  geom_point(aes(y = mean.acc), colour = 'red', size = 2) +
+  geom_text(aes(y = mean.acc, label = round(mean.acc, 2)), position = position_nudge(x = -.2)) +
+  geom_hline(yintercept = 1)
 
 # does experimental condition (Determiner) affect accuracy?
 # analyse statistically:
@@ -183,6 +225,7 @@ trials %>%
   geom_jitter(alpha = 0.2) +
   geom_smooth(method = "lm")
 
+# is it robust?
 lm(Bis.RT ~ age, trials) %>% summary()
 
 #--------------------------------------------------------------
