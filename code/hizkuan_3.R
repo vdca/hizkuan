@@ -41,7 +41,7 @@ ehme <- read_csv("../data/ehme.csv")
 # Q: how do we save a dataframe from R into the computer?
 # --> save all the pronouns into a separate file. extra: ordered by frequency.
 pronouns <- filter(ehme, pos == "izr")
-write_csv(pronouns, "../data/besteizenbat.csv")
+# write_csv(pronouns, "../data/besteizenbat.csv")
 
 #--------------------------------------------------------------
 # word length and frequency: plot and regression
@@ -51,16 +51,26 @@ pronouns <- filter(ehme, pos == "izr")
 
 # plot from previous session
 ggplot(pronouns) +
-  geom_label(aes(x = lemmalength, y = ehme_log, label = lemma), alpha = 0.5) +
+  # geom_label(aes(x = lemmalength, y = ehme_log, label = lemma), alpha = .5) +
+  geom_point(aes(x = lemmalength, y = ehme_log, colour = nwords), size = 1) +
   xlab("Luzera") +
   ylab("Maiztasuna (log)") +
-  ggtitle("Long pronouns are less frequent")
+  ggtitle("Long pronouns are less frequent") +
+  coord_flip()
 
 # quick stats preview: lm() for simple linear regression:
 # the equation y ~ x means: response ~ predictor(s) means: does predictor x explain response y?
 # are longer words less frequent? does word length explain word frequency?
 freq_model <- lm(ehme_log ~ lemmalength, pronouns)
+freq_model
 summary(freq_model)
+
+pronouns$fitted <- fitted(freq_model)
+pronouns$residuals <- residuals(freq_model)
+freq_model$assign
+fitted(freq_model)
+predict(freq_model, tibble(lemmalength = c(1, 3, 20),
+                           lemma = c('i', 'zeu', 'askozluzeagoa')))
 
 # let's visualise the model:
 ggplot(pronouns) +
@@ -68,7 +78,14 @@ ggplot(pronouns) +
   xlab("Luzera") +
   ylab("Maiztasuna (log)") +
   ggtitle("Long pronouns are less frequent") +
-  geom_smooth(aes(x = lemmalength, y = ehme_log))
+  geom_smooth(aes(x = lemmalength, y = ehme_log), method = "lm")
+
+ggplot(pronouns) +
+  geom_label(aes(x = lemmalength, y = ehme_log, label = lemma), alpha = 0.5) +
+  xlab("Luzera") +
+  ylab("Maiztasuna (log)") +
+  ggtitle("Long pronouns are less frequent") +
+  geom_smooth(aes(x = lemmalength, y = ehme_log), method = "lm", se = F)
 
 #--------------------------------------------------------------
 # sociophonetics in Garazi
@@ -102,11 +119,16 @@ c(3,4,5) %>% mean()
 # add proportion within each group (use mutate() to add extra columns)
 # arrange by proportion
 
-garazi %>% 
+filter(garazi, feature == "h hasieran")
+
+emaitzafinalak <- garazi %>% 
   filter(feature == "h hasieran") %>% 
   group_by(Herria, Generoa, Adina) %>%
   count(Erantzuna) %>% 
-  mutate(proportion = n/sum(n))
+  mutate(proportion = n/sum(n)*100,
+         borobilduta = round(proportion, digits = 2))
+
+write_csv(emaitzafinalak, "../emaitzak/alskdjflk.csv")
 
 print("hello")
 "hello" %>% print()
@@ -123,10 +145,26 @@ garazi_h <- garazi %>%
   arrange(p)
 
 garazi_h %>% 
-  mutate(Generoa = recode(Generoa, 'neskak', 'mutilak')) %>% 
+  mutate(gender = recode(Generoa, '1' = 'neskak', '2' =  'mutilak'),
+         gender2 = recode(gender, 'mutilak' = 'male', 'neskak' = 'female')) %>% 
   ggplot() +
   geom_col(aes(x = Adina, y = p, fill = Adina), position = position_dodge()) + 
-  facet_grid(Generoa ~ Herria)
+  facet_grid(gender ~ Herria) +
+  labs(x = 'age', y = 'proportion of aspiration')
+
+#--------------------------------------------------------------
+# how to join tables
+#--------------------------------------------------------------
+
+# table no. 1
+garazi <- read_csv('../data/garazi_alldata.csv')
+
+# table no. 2
+herriak <- read_csv('../data/garazi_herriak.csv')
+
+# join, merge tables
+garazi <- left_join(garazi, herriak) %>% 
+  select(-Herria)
 
 #--------------------------------------------------------------
 # generics and RT (reaction times)
@@ -138,15 +176,30 @@ generics <- read_tsv("../data/generics_adults_response.txt")
 # data as exported from E-Prime.
 # too many columns; select a handful.
 # also: filter out training trials
+
+select(generics, Subject)
+
+generics %>%
+  select(Subject, Trial, Determiner, accuracy = Bis.ACC, Bis.CRESP, Bis.RESP, Bis.RT)
+
 test.trials <- generics %>%
   select(Subject, Trial, Determiner, Bis.ACC, Bis.CRESP, Bis.RESP, Bis.RT) %>% 
-  filter()
+  mutate(Determiner = recode(Determiner, '?' = 'training'),
+         logRT = log(Bis.RT)) %>% 
+  filter(Determiner != 'training')
+
+test.trials <- generics %>% 
+  select(Subject, Determiner, accuracy = Bis.ACC, RT = Bis.RT)
+
+
 
 # does experimental condition (Determiner) affect RT?
 # analyse visually:
-test.trials %>% 
-  ggplot() +
-  geom_density(aes(x = Bis.RT, fill = Determiner), alpha = 0.5)
+
+ggplot(test.trials) +
+  geom_density(aes(x = logRT, fill = Determiner), alpha = 0.6) +
+  theme_bw() +
+  facet_grid(~ Bis.ACC)
 
 test.trials %>% 
   ggplot() +
@@ -161,13 +214,25 @@ test.trials %>%
 # https://cran.r-project.org/web/packages/cowplot/vignettes/introduction.html
 library(cowplot)
 theme_set(theme_cowplot())
-# theme_set(theme_bw() + theme(strip.background = element_blank()))
+theme_set(theme_bw() + theme(strip.background = element_blank()))
 #--------------------------------------------------------------
 
 # does experimental condition (Determiner) affect RT?
 # analyse statistically:
-model_rt <- lm(Bis.RT ~ Determiner, data = test.trials)
+model_rt <- lm(logRT ~ Determiner, data = test.trials)
 summary(model_rt)
+
+lm(logRT ~ Bis.ACC * Determiner, test.trials) %>% summary()
+
+test.trials %>% 
+  group_by(Bis.ACC, Determiner) %>% 
+  summarise(meanRT = mean(Bis.RT))
+
+
+# lm = linear model
+# glm = generalized linear model
+
+
 
 # confidence intervals for binomial (proportion) data
 library(epitools)
@@ -201,8 +266,38 @@ acc.ci %>%
 
 # does experimental condition (Determiner) affect accuracy?
 # analyse statistically:
+model_acc <- glm(Bis.ACC ~ Determiner * Adina, test.trials, family = "binomial")
+summary(model_acc)
+
+# 1. Mixed models (fixed + random)
+# 2. Interactions
+
 model_acc <- glm(Bis.ACC ~ Determiner, test.trials, family = "binomial")
 summary(model_acc)
+
+dardar <- garazi %>% filter(feature == 'Dardarkarixak')
+garazi_glm <- glmer(as.factor(erantzuna2) ~ Adina + Herri_izena, dardar, family = "binomial")
+summary(garazi_glm)
+
+c(NA, 1, 2, 3)
+filter(Adina == 3)
+
+garazi <- garazi %>% 
+  mutate(subject = paste(Herri_izena, Generoa, Adina, sep = "_"))
+dardar <- garazi %>% filter(feature == 'Dardarkarixak')
+garazi_glm <- glmer(as.factor(erantzuna2) ~ Adina + Herri_izena + (1|subject), dardar, family = "binomial")
+
+library(lmerTest)
+
+summary(garazi_glm)
+
+(fixed)
+lm
+glm
+
+(fixed + random)
+lmer
+glmer
 
 #--------------------------------------------------------------
 # explore participants' background variables
@@ -212,8 +307,15 @@ summary(model_acc)
 participants <- read_xlsx("../data/generics_adults_participants.xlsx") 
 
 # how to join dataframes (ensure there's at leas 1 column in common)
-trials <- test.trials %>% 
+
+test.trials <- test.trials %>% 
   mutate(Participant_ID = paste(Subject, "_1", sep = "")) %>% 
+  select(-Subject)
+
+left_join(test.trials, participants)
+
+trials <- test.trials %>% 
+  # mutate(Participant_ID = paste(Subject, "_1", sep = "")) %>% 
   left_join(participants) %>% 
   rename(age = Edad.años)
 
@@ -221,7 +323,7 @@ trials <- test.trials %>%
 # visualise relation between age and RT
 trials %>% 
   ggplot() +
-  aes(x = age, y = Bis.RT) +
+  aes(x = age, y = RT) +
   geom_jitter(alpha = 0.2) +
   geom_smooth(method = "lm")
 
@@ -235,4 +337,5 @@ lm(Bis.RT ~ age, trials) %>% summary()
 # why the regressions we did today are wrong
 # stats: more on regressions (+ random effects)
 
-
+model_acc <- glm(Bis.ACC ~ Determiner * age, trials, family = "binomial")
+summary(model_acc)
